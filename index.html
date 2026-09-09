@@ -1,1 +1,31 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Cozy Block — 街の性能テスト</title><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css"><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script></head><body><header><small>SMALL TOWN / PERFORMANCE LAB</small><h1>Cozy Block <sup>01</sup></h1><p>小さな街で、次のゲームの準備。</p></header><main id="viewport"></main><aside><small>LIVE PERFORMANCE</small><div class="reading"><strong id="fps">—</strong> FPS <b id="frame">— ms</b></div><dl id="metrics"></dl><small class="note">Frame Time = 平均フレーム間隔<br>描画数は影を含む・GPU時間ではありません</small></aside><footer><div class="controls"><span>SCENE LOAD</span><button data-level="LOW" aria-pressed="true">LOW</button><button data-level="MEDIUM" aria-pressed="false">MEDIUM</button><button data-level="HIGH" aria-pressed="false">HIGH</button><button id="reset">視点を戻す</button></div><p id="counts"></p><p>ドラッグ／1本指：回転 · ピンチ：拡大 · 2本指：移動</p><p id="status" role="status">車のGLBを読み込み中…</p></footer><div id="error" role="alert" hidden></div><script type="module">import('./src/main.js').catch(e=>{const b=document.querySelector('#error');b.hidden=false;b.textContent='起動失敗：HTTPサーバー・ネット接続・WebGL2対応を確認してください。 '+e.message;});</script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cozy Block — 徒歩と運転の性能テスト</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <header><small>SMALL TOWN / PERFORMANCE LAB</small><h1>Cozy Block <sup>01</sup></h1><p>街を歩いて、車で出かけよう。</p></header>
+  <main id="viewport" aria-label="街の3D表示"></main>
+  <aside aria-label="性能パネル">
+    <small>LIVE PERFORMANCE</small>
+    <div class="reading"><strong id="fps">—</strong> FPS <b id="frame">— ms</b></div>
+    <div class="mode-line">MODE <strong id="mode">WALK</strong><span id="speed"></span></div>
+    <dl id="metrics"></dl>
+    <small class="note">Frame Time = 平均フレーム間隔<br>描画数は影を含む・GPU時間ではありません</small>
+  </aside>
+  <footer>
+    <div class="controls"><span>SCENE LOAD</span><button data-level="LOW" aria-pressed="false">LOW</button><button data-level="MEDIUM" aria-pressed="false">MEDIUM</button><button data-level="HIGH" aria-pressed="true">HIGH</button><button id="reset">街全体</button></div>
+    <p id="counts"></p><p class="load-hint">負荷の変更で徒歩の開始位置へ戻ります</p>
+  </footer>
+  <div id="stick" role="group" aria-label="移動スティック：上で前進、下で後退、左右で移動または旋回"><span id="knob"></span><span class="stick-label">MOVE</span></div>
+  <button id="interact" hidden>乗る</button>
+  <p id="status" role="status">cozy_car.glb 読み込み中…</p>
+  <div id="error" role="alert" hidden></div>
+  <script type="module">import('./src/main.js').catch(e=>{const b=document.querySelector('#error');b.hidden=false;b.textContent='起動失敗：HTTPサーバー・ネット接続・WebGL2対応を確認してください。 '+e.message;});</script>
+</body>
+</html>

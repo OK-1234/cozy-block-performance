@@ -9,3 +9,5 @@ Quaternius、Kenney、Poly Pizza等の第三者3D素材は今回使用してい�
 今後追加する場合は、ファイル、作者、取得元の個別ページURL、ライセンス名・版、確認日、必要な帰属表示、改変内容を追記してください。配布サイト名だけでCC0と判断しないでください。
 
 プログラム依存：Three.js 0.180.0（MIT）。https://github.com/mrdoob/three.js/blob/r180/LICENSE
+
+追加：`src/character.js`の仮主人公は本プロトタイプ用の手続き生成モデル。第三者キャラクター素材は使用していません。
