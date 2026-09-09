@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cozy Car — GLB表示テスト</title>
+  <meta name="description" content="Blenderから書き出したcozy_car.glbの見た目を確認するThree.jsビューア。">
+  <link rel="icon" href="data:,">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #eef3f5; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #error { position: fixed; inset: 1rem; margin: auto; height: fit-content; max-width: 32rem; padding: 1rem; background: white; color: #24333c; font: 16px/1.6 sans-serif; }
+    [hidden] { display: none !important; }
+  </style>
+  <script type="importmap">
+    {"imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }}
+  </script>
+</head>
+<body>
+  <div id="error" role="alert" hidden></div>
+  <script type="module">
+    // HTMLと同じフォルダの既存GLBを読み込む。変換・再保存はしない。
+    const MODEL_URL = './cozy_car.glb';
+    const errorBox = document.querySelector('#error');
+
+    try {
+      const [THREE, { GLTFLoader }, { OrbitControls }, { RoomEnvironment }] = await Promise.all([
+        import('three'),
+        import('three/addons/loaders/GLTFLoader.js'),
+        import('three/addons/controls/OrbitControls.js'),
+        import('three/addons/environments/RoomEnvironment.js')
+      ]);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.AgXToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.body.appendChild(renderer.domElement);
+      renderer.domElement.setAttribute('aria-label', '車の3D表示。ドラッグまたは1本指で回転、ホイールまたはピンチで拡大縮小。');
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#eef3f5');
+      // 起動時に一度だけ生成する環境光。背景に部屋は表示しない。
+      // PBRの色・粗さを維持しつつ、窓と塗装に柔らかな反射を与える。
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const room = new RoomEnvironment();
+      const environment = pmrem.fromScene(room, 0.04);
+      scene.environment = environment.texture;
+      scene.environmentIntensity = 0.65;
+      room.dispose();
+      pmrem.dispose();
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xdce5e9, 1.25));
+
+      const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.01, 100);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enablePan = false;
+      controls.maxPolarAngle = Math.PI / 2 - 0.04;
+      // 静止中は描画しない。自動回転・ゲームループ・ポストプロセスなし。
+      function render() { renderer.render(scene, camera); }
+      controls.addEventListener('change', render);
+
+      const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
+      const car = gltf.scene;
+      // ジオメトリ、変換、マテリアルには触れず影のフラグだけ設定。
+      car.traverse(object => {
+        if (object.isMesh) {
+          object.castShadow = true;
+          object.receiveShadow = true;
+        }
+      });
+      scene.add(car);
+      const bounds = new THREE.Box3().setFromObject(car);
+      if (bounds.isEmpty()) throw new Error('GLBに表示可能なモデルがありません。');
+      const center = bounds.getCenter(new THREE.Vector3());
+      const size = bounds.getSize(new THREE.Vector3());
+      const span = Math.max(size.x, size.y, size.z);
+      const radius = size.length() / 2;
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(span * 200, span * 200),
+        new THREE.MeshStandardMaterial({ color: '#e8eef0', roughness: 1 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.set(center.x, bounds.min.y - span * 0.001, center.z);
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const key = new THREE.DirectionalLight(0xfff9f0, 2.3);
+      key.position.copy(center).add(new THREE.Vector3(span, span * 2, span * 1.5));
+      key.target.position.copy(center);
+      key.castShadow = true;
+      key.shadow.mapSize.set(1024, 1024);
+      Object.assign(key.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: span * 0.1, far: span * 6 });
+      key.shadow.normalBias = span * 0.008;
+      key.shadow.bias = -0.0001;
+      key.shadow.camera.updateProjectionMatrix();
+      scene.add(key, key.target);
+      const fill = new THREE.DirectionalLight(0xffffff, 0.8);
+      fill.position.copy(center).add(new THREE.Vector3(-span, span, -span));
+      fill.target.position.copy(center);
+      scene.add(fill, fill.target);
+
+      controls.target.copy(center);
+      // Blender (4.7, -6.4, 3.9) の方向をglTFのY-upに合わせる。
+      const viewDirection = new THREE.Vector3(4.7, 3.07, 6.4).normalize();
+      function fitDistance() {
+        const vertical = THREE.MathUtils.degToRad(camera.fov) / 2;
+        const horizontal = Math.atan(Math.tan(vertical) * camera.aspect);
+        return radius / Math.sin(Math.min(vertical, horizontal)) * 1.12;
+      }
+      let fittedDistance = fitDistance();
+      camera.position.copy(center).addScaledVector(viewDirection, fittedDistance);
+      camera.near = span * 0.01;
+      camera.far = span * 100;
+      controls.minDistance = radius * 1.25;
+      controls.maxDistance = fittedDistance * 3;
+      camera.updateProjectionMatrix();
+      controls.update();
+      renderer.shadowMap.autoUpdate = false;
+      renderer.shadowMap.needsUpdate = true;
+      render();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight;
+        const nextDistance = fitDistance();
+        // 縦長画面でも全体が入るよう、操作した方向とズーム比率を維持して再調整。
+        camera.position.sub(controls.target).multiplyScalar(nextDistance / fittedDistance).add(controls.target);
+        fittedDistance = nextDistance;
+        controls.maxDistance = nextDistance * 3;
+        camera.updateProjectionMatrix();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        renderer.setSize(innerWidth, innerHeight);
+        controls.update();
+        render();
+      });
+      renderer.domElement.addEventListener('webglcontextlost', event => {
+        event.preventDefault();
+        errorBox.textContent = '3D表示が中断されました。ページを再読み込みしてください。';
+        errorBox.hidden = false;
+      });
+    } catch (error) {
+      console.error(error);
+      errorBox.textContent = '3D表示を開始できませんでした。HTTPサーバーで開き、同じフォルダのcozy_car.glb、インターネット接続、ブラウザのWebGL対応を確認してください。';
+      errorBox.hidden = false;
+    }
+  </script>
+</body>
+</html>
