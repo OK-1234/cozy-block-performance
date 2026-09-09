@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
 // Replace url with a local GLB path. width is the uniform target size in metres.
-export const ASSETS={car:{url:'./assets/car/cozy_car.glb',width:3.6,rotation:0},building:{url:null,width:5.2,rotation:0},tree:{url:null,width:2,rotation:0},lamp:{url:null,width:0.65,rotation:0},bench:{url:null,width:1.7,rotation:0}};
+export const ASSETS={character:{url:null,width:0.55,rotation:0},car:{url:'./assets/car/cozy_car.glb',width:3.6,rotation:0},building:{url:null,width:5.2,rotation:0},tree:{url:null,width:2,rotation:0},lamp:{url:null,width:0.65,rotation:0},bench:{url:null,width:1.7,rotation:0}};
 export class AssetLibrary{
  constructor(){this.loader=new GLTFLoader();this.sources=new Map();this.models={};}
  async init(){await Promise.all(Object.entries(ASSETS).map(async([kind,spec])=>{if(!spec.url)return;if(!this.sources.has(spec.url))this.sources.set(spec.url,this.loader.loadAsync(spec.url));const gltf=await this.sources.get(spec.url);this.models[kind]=gltf.scene;}));}

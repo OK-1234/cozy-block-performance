@@ -9,8 +9,9 @@ class Batches{
 }
 export function buildTown(level,assets){
  const counts=LEVELS[level],root=new THREE.Group(),b=new Batches(root);let glbInstances=0;
+ const colliders=[],carModels=[];
  const box=(c,x,y,z,w,h,d,r=0)=>b.add('box',c,x,y,z,w,h,d,r);
- const replacement=(kind,x,z,r=0)=>{const model=assets.create(kind);if(!model)return false;model.position.set(x,0.26,z);model.rotation.y=r;root.add(model);glbInstances++;return true;};
+ const replacement=(kind,x,z,r=0)=>{const model=assets.create(kind);if(!model)return false;model.position.set(x,0.26,z);model.rotation.y=r;root.add(model);glbInstances++;return model;};
  box('#b4d5bd',0,-0.65,0,46,1.3,46);box('#d0e3c4',0,0.02,0,45.5,0.12,45.5);
  box('#849a9f',0,0.11,0,6.4,0.12,45.6);box('#849a9f',0,0.12,0,45.6,0.12,6.4);
  for(const x of [-1,1])for(const z of [-1,1])box('#f2e8d2',x*13.1,0.15,z*13.1,19.4,0.22,19.4);
@@ -18,7 +19,9 @@ export function buildTown(level,assets){
  for(const s of [-1,1])for(let i=-2;i<=2;i++){box('#fff5de',i*0.95,0.2,s*4.3,0.55,0.02,1.3);box('#fff5de',s*4.3,0.2,i*0.95,1.3,0.02,0.55);}
  const sites=[[-15,-11],[-7,-11],[10,-11],[-15,11],[-7,11],[10,11],[17,-11],[17,11],[-11,-19],[-11,19]];
  const colors=['#e6b58d','#95c9c1','#e8ca82','#bcb9d8','#e6b3b0','#98bcca'];
- sites.slice(0,counts.buildings).forEach(([x,z],i)=>{if(replacement('building',x,z))return;const h=3.5+(i%3)*0.65,face=z<0?1:-1;
+ sites.slice(0,counts.buildings).forEach(([x,z],i)=>{const glb=replacement('building',x,z);
+ if(glb){const bounds=new THREE.Box3().setFromObject(glb);colliders.push({minX:bounds.min.x,maxX:bounds.max.x,minZ:bounds.min.z,maxZ:bounds.max.z,height:bounds.max.y});return;}
+ colliders.push({minX:x-2.95,maxX:x+2.95,minZ:z-3.4,maxZ:z+3.4,height:7});const h=3.5+(i%3)*0.65,face=z<0?1:-1;
  box('#e5dbc7',x,0.4,z,5.8,0.3,5.8);box(colors[i%6],x,h/2+0.5,z,5.2,h,5);
  box('#faf0d9',x,h+0.6,z,5.65,0.25,5.5);
  b.add('roof',i%2?'#789d9d':'#c58776',x,h+1.25,z,4.1,1.2,4.1,Math.PI/4);
@@ -35,7 +38,13 @@ export function buildTown(level,assets){
  for(let i=0;i<counts.benches;i++){const x=-17+(i%4)*10,z=i<4?18:-18;if(replacement('bench',x,z))continue;box('#c59d77',x,0.8,z,1.9,0.14,0.6);box('#c59d77',x,1.2,z+0.3,1.9,0.6,0.12);for(const dx of [-0.65,0.65])box('#617e7b',x+dx,0.51,z,0.12,0.5,0.5);}
  for(const s of [-1,1]){b.add('pole','#78928b',s*5,1.2,s*5,0.09,1.9,0.09);box('#659bb1',s*5,2.05,s*5,0.95,0.5,0.1);box('#f7ebd5',s*5,2.05,s*5+0.07,0.6,0.07,0.02);}
  const cars=[[-9,1.55,0],[8,-1.55,Math.PI],[-1.55,-13,Math.PI/2],[1.55,12,-Math.PI/2],[-18,1.55,0],[17,-1.55,Math.PI]];
- cars.slice(0,counts.cars).forEach(([x,z,r])=>replacement('car',x,z,r));b.finish();
- return {root,counts,glbInstances,dispose:()=>{root.removeFromParent();b.dispose();}};
+ cars.slice(0,counts.cars).forEach(([x,z,r],id)=>{
+   const model=replacement('car',x,z,0);
+   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+   const halfLength=size.x/2,halfWidth=size.z/2;
+   Object.assign(model.userData,{id,halfLength,halfWidth,footprint:{minX:-halfLength,maxX:halfLength,minZ:-halfWidth,maxZ:halfWidth}});
+   model.rotation.y=r;carModels.push(model);
+ });b.finish();
+ return {root,counts,glbInstances,colliders,cars:carModels,dispose:()=>{root.removeFromParent();b.dispose();}};
 }
 
